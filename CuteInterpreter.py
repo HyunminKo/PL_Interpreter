@@ -317,12 +317,14 @@ class CuteInterpreter(object):
 
     TRUE_NODE = Node(TokenType.TRUE)
     FALSE_NODE = Node(TokenType.FALSE)
+    def undefinedHandler(self,value):
+            print "… " + value + ": undefined;"
+            print "…  cannot reference undefined identifier"
+            return None
 
     def lookupTable(self, rhs):
         if not (symbolTable.has_key(rhs.value)):
-            print "… " + rhs.value + ": undefined;"
-            print "…  cannot reference undefined identifier"
-            return None
+            return self.undefinedHandler(rhs.value)
 
         rhs = symbolTable[rhs.value]
         if type(rhs) is str:
@@ -338,16 +340,12 @@ class CuteInterpreter(object):
         if symbolTable.has_key(rhs1.value):
             rhs1 = self.lookupTable(rhs1)
         elif rhs1.type is TokenType.ID:
-            print "… " + rhs1.value + ": undefined;"
-            print "…  cannot reference undefined identifier"
-            return None
+            return self.undefinedHandler(rhs1.value)
 
         if rhs2 is not None and symbolTable.has_key(rhs2.value):
             rhs2 = self.lookupTable(rhs2)
         elif rhs2.type is TokenType.ID:
-            print "… " + rhs2.value + ": undefined;"
-            print "…  cannot reference undefined identifier"
-            return None
+            return self.undefinedHandler(rhs2.value)
 
         expr_rhs1 = self.run_expr(rhs1)
         expr_rhs2 = self.run_expr(rhs2)
@@ -373,16 +371,12 @@ class CuteInterpreter(object):
         if symbolTable.has_key(rhs1.value):
             rhs1 = self.lookupTable(rhs1)
         elif rhs1.type is TokenType.ID:
-            print "… " + rhs1.value + ": undefined;"
-            print "…  cannot reference undefined identifier"
-            return None
+            return self.undefinedHandler(rhs1.value)
 
         if rhs2 is not None and symbolTable.has_key(rhs2.value):
             rhs2 = self.lookupTable(rhs2)
         elif rhs2.type is TokenType.ID:
-            print "… " + rhs2.value + ": undefined;"
-            print "…  cannot reference undefined identifier"
-            return None
+            return self.undefinedHandler(rhs2.value)
 
         expr_rhs1 = self.run_expr(rhs1)
         expr_rhs2 = self.run_expr(rhs2)
@@ -453,16 +447,12 @@ class CuteInterpreter(object):
             if symbolTable.has_key(rhs1.value):
                 rhs1 = self.lookupTable(rhs1)
             elif rhs1.type is TokenType.ID:
-                print "… " + rhs1.value + ": undefined;"
-                print "…  cannot reference undefined identifier"
-                return None
+                return self.undefinedHandler(rhs1.value)
 
             if rhs2 is not None and symbolTable.has_key(rhs2.value):
                 rhs2 = self.lookupTable(rhs2)
             elif type(rhs2) is Node and rhs2.type is TokenType.ID:
-                print "… " + rhs2.value + ": undefined;"
-                print "…  cannot reference undefined identifier"
-                return None
+                return self.undefinedHandler(rhs2.value)
 
         if func_node.type is not TokenType.COND:
             expr_rhs1 = self.run_expr(rhs1)
@@ -531,6 +521,8 @@ class CuteInterpreter(object):
         elif func_node.type is TokenType.COND:
             if rhs1.value.type is TokenType.LIST:
                 cond = self.run_expr(rhs1.value)
+                if cond is None:
+                    return None
                 cond.next = rhs1.value.next
             else:
                 cond = rhs1.value
@@ -544,19 +536,15 @@ class CuteInterpreter(object):
                         cond.type = TokenType.TRUE
 
                 elif cond.type is TokenType.ID:
-                    print "… " + cond.value + ": undefined;"
-                    print "…  cannot reference undefined identifier"
-                    return None
+                    return self.undefinedHandler(cond.value)
 
             if cond.type is TokenType.TRUE:
                 if symbolTable.has_key(cond.next.value):
                     cond.next.value = self.lookupTable(cond.next.value)
                 elif cond.next.type is TokenType.ID:
-                    print "… " + cond.next.value + ": undefined;"
-                    print "…  cannot reference undefined identifier"
-                    return None
+                    return self.undefinedHandler(cond.next.value)
                 return Node(cond.next.type, cond.next)
-            elif cond.type is TokenType.FALSE:
+            elif rhs1.next is None and cond.type is TokenType.FALSE:
                 return None
             else:
                 tempNode = Node(TokenType.COND)
