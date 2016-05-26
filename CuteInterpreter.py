@@ -318,6 +318,15 @@ class CuteInterpreter(object):
     TRUE_NODE = Node(TokenType.TRUE)
     FALSE_NODE = Node(TokenType.FALSE)
 
+    def lookupTable(self, rhs):
+
+        rhs = symbolTable[rhs.value]
+        if type(rhs) is str:
+            return Node(TokenType.INT, rhs)
+        elif rhs.type in [TokenType.TRUE, TokenType.FALSE]:
+            return rhs
+        return Node(TokenType.LIST, rhs)
+
     def run_arith(self, arith_node):
         rhs1 = arith_node.next
         rhs2 = rhs1.next if rhs1.next is not None else None
@@ -391,6 +400,16 @@ class CuteInterpreter(object):
             node = pop_node_from_quote_list(node)
             if node is None:return True
             return False
+
+        def insertTable(id, value):
+            symbolTable[id] = value
+
+        if func_node.type is TokenType.DEFINE:
+            rhs2 = self.run_expr(rhs2)
+            if rhs2.type in [TokenType.TRUE, TokenType.FALSE]:
+                insertTable(rhs1.value, rhs2)
+            else:
+                insertTable(rhs1.value, rhs2.value)
 
         if func_node.type is TokenType.CAR:
             rhs1 = self.run_expr(rhs1)
@@ -505,7 +524,7 @@ class CuteInterpreter(object):
         if op_code.type in [TokenType.LT, TokenType.EQ, TokenType.GT]:
             return self.run_rela(op_code)
         if op_code.type in \
-                [TokenType.CAR, TokenType.CDR, TokenType.CONS, TokenType.ATOM_Q,\
+                [TokenType.DEFINE, TokenType.CAR, TokenType.CDR, TokenType.CONS, TokenType.ATOM_Q,\
                  TokenType.EQ_Q, TokenType.NULL_Q, TokenType.NOT, TokenType.COND]:
             return self.run_func(op_code)
         if op_code.type is TokenType.QUOTE:
@@ -598,4 +617,6 @@ def Test_All():
     while True:
         input = raw_input("> ")
         Test_method(input)
+
+symbolTable = {}
 Test_All()
