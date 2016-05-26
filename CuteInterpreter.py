@@ -319,6 +319,10 @@ class CuteInterpreter(object):
     FALSE_NODE = Node(TokenType.FALSE)
 
     def lookupTable(self, rhs):
+        if not (symbolTable.has_key(rhs.value)):
+            print "… " + rhs.value + ": undefined;"
+            print "…  cannot reference undefined identifier"
+            return None
 
         rhs = symbolTable[rhs.value]
         if type(rhs) is str:
@@ -330,8 +334,25 @@ class CuteInterpreter(object):
     def run_arith(self, arith_node):
         rhs1 = arith_node.next
         rhs2 = rhs1.next if rhs1.next is not None else None
+
+        if symbolTable.has_key(rhs1.value):
+            rhs1 = self.lookupTable(rhs1)
+        elif rhs1.type is TokenType.ID:
+            print "… " + rhs1.value + ": undefined;"
+            print "…  cannot reference undefined identifier"
+            return None
+
+        if rhs2 is not None and symbolTable.has_key(rhs2.value):
+            rhs2 = self.lookupTable(rhs2)
+        elif rhs2.type is TokenType.ID:
+            print "… " + rhs2.value + ": undefined;"
+            print "…  cannot reference undefined identifier"
+            return None
+
         expr_rhs1 = self.run_expr(rhs1)
         expr_rhs2 = self.run_expr(rhs2)
+        if expr_rhs1 is None or expr_rhs2 is None:
+            return None
 
         if arith_node.type is TokenType.PLUS:
             result = int(expr_rhs1.value) + int(expr_rhs2.value)
@@ -348,8 +369,25 @@ class CuteInterpreter(object):
     def run_rela(self, rela_node):
         rhs1 = rela_node.next
         rhs2 = rhs1.next if rhs1.next is not None else None
+
+        if symbolTable.has_key(rhs1.value):
+            rhs1 = self.lookupTable(rhs1)
+        elif rhs1.type is TokenType.ID:
+            print "… " + rhs1.value + ": undefined;"
+            print "…  cannot reference undefined identifier"
+            return None
+
+        if rhs2 is not None and symbolTable.has_key(rhs2.value):
+            rhs2 = self.lookupTable(rhs2)
+        elif rhs2.type is TokenType.ID:
+            print "… " + rhs2.value + ": undefined;"
+            print "…  cannot reference undefined identifier"
+            return None
+
         expr_rhs1 = self.run_expr(rhs1)
         expr_rhs2 = self.run_expr(rhs2)
+        if expr_rhs1 is None or expr_rhs2 is None:
+            return None
 
         if rela_node.type is TokenType.LT:
             if int(expr_rhs1.value) < int(expr_rhs2.value): return self.TRUE_NODE
@@ -411,27 +449,46 @@ class CuteInterpreter(object):
             else:
                 insertTable(rhs1.value, rhs2.value)
 
+        else:
+            if symbolTable.has_key(rhs1.value):
+                rhs1 = self.lookupTable(rhs1)
+            elif rhs1.type is TokenType.ID:
+                print "… " + rhs1.value + ": undefined;"
+                print "…  cannot reference undefined identifier"
+                return None
+
+            if rhs2 is not None and symbolTable.has_key(rhs2.value):
+                rhs2 = self.lookupTable(rhs2)
+            elif type(rhs2) is Node and rhs2.type is TokenType.ID:
+                print "… " + rhs2.value + ": undefined;"
+                print "…  cannot reference undefined identifier"
+                return None
+
+        if func_node.type is not TokenType.COND:
+            expr_rhs1 = self.run_expr(rhs1)
+            if expr_rhs1 is None:
+                return None
+
         if func_node.type is TokenType.CAR:
-            rhs1 = self.run_expr(rhs1)
-            if not is_quote_list(rhs1):
+            if not is_quote_list(expr_rhs1):
                 print ("car error!")
-            result = pop_node_from_quote_list(rhs1)
+            result = pop_node_from_quote_list(expr_rhs1)
             if result.type is not TokenType.LIST:
                 return result
             return create_quote_node(result)
 
         elif func_node.type is TokenType.CDR:
-            #작성
-            rhs1 = self.run_expr(rhs1)
-            if not is_quote_list(rhs1):
+            # 작성
+            if not is_quote_list(expr_rhs1):
                 print ("cdr error!")
-            result = pop_node_from_quote_list(rhs1)
+            result = pop_node_from_quote_list(expr_rhs1)
             if result.next is not None:
                 return create_quote_node(result.next, True)
 
         elif func_node.type is TokenType.CONS:
-            expr_rhs1 = self.run_expr(rhs1)
             expr_rhs2 = self.run_expr(rhs2)
+            if expr_rhs2 is None:
+                return None
 
             if expr_rhs2.value is not None:
                 result2 = pop_node_from_quote_list(expr_rhs2)
@@ -444,8 +501,8 @@ class CuteInterpreter(object):
                 temp = expr_rhs1
             temp.next = result2
             return create_quote_node(temp, True)
-            #작성
-            #rhs2는 무조건 list라고 가정
+            # 작성
+            # rhs2는 무조건 list라고 가정
 
         elif func_node.type is TokenType.ATOM_Q:
             if list_is_null(rhs1): return self.TRUE_NODE
@@ -461,14 +518,13 @@ class CuteInterpreter(object):
                 return self.TRUE_NODE
             else:
                 return self.FALSE_NODE
-            #작성
+                # 작성
 
         elif func_node.type is TokenType.NULL_Q:
             if list_is_null(rhs1): return self.TRUE_NODE
             return self.FALSE_NODE
 
         elif func_node.type is TokenType.NOT:
-            expr_rhs1 = self.run_expr(rhs1)
             if expr_rhs1.type is TokenType.FALSE: return self.TRUE_NODE
             return self.FALSE_NODE
 
@@ -478,15 +534,35 @@ class CuteInterpreter(object):
                 cond.next = rhs1.value.next
             else:
                 cond = rhs1.value
+
             if cond.type not in [TokenType.TRUE, TokenType.FALSE]:
-                print("Type Error!")
-                return None
+                if symbolTable.has_key(cond.value):
+                    temp = self.lookupTable(cond)
+                    if temp.type is TokenType.FALSE:
+                        cond.type = TokenType.FALSE
+                    else:
+                        cond.type = TokenType.TRUE
+
+                elif cond.type is TokenType.ID:
+                    print "… " + cond.value + ": undefined;"
+                    print "…  cannot reference undefined identifier"
+                    return None
+
             if cond.type is TokenType.TRUE:
+                if symbolTable.has_key(cond.next.value):
+                    cond.next.value = self.lookupTable(cond.next.value)
+                elif cond.next.type is TokenType.ID:
+                    print "… " + cond.next.value + ": undefined;"
+                    print "…  cannot reference undefined identifier"
+                    return None
                 return Node(cond.next.type, cond.next)
+            elif cond.type is TokenType.FALSE:
+                return None
             else:
                 tempNode = Node(TokenType.COND)
                 tempNode.next = rhs1.next
                 return self.run_func(tempNode)
+
         else:
             return None
 
