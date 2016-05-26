@@ -343,7 +343,7 @@ class CuteInterpreter(object):
             result = int(expr_rhs1.value) / int(expr_rhs2.value)
         else:
             return None
-        return Node(TokenType.INT, result)
+        return Node(TokenType.INT, str(result))
 
     def run_rela(self, rela_node):
         rhs1 = rela_node.next
@@ -611,7 +611,11 @@ def Test_method(input):
     node = test_basic_paser.parse_expr()
     cute_inter = CuteInterpreter()
     result = cute_inter.run_expr(node)
-    print "…", print_node(result)
+    if type(result) is Node and result.type is TokenType.ID:
+        result = cute_inter.lookupTable(result)
+    printNode = print_node(result)
+    if printNode is not "":
+        print "…", printNode
 
 def Test_All():
     while True:
