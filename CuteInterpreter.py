@@ -540,9 +540,11 @@ class CuteInterpreter(object):
 
             if cond.type is TokenType.TRUE:
                 if symbolTable.has_key(cond.next.value):
-                    cond.next.value = self.lookupTable(cond.next.value)
+                    cond.next = self.lookupTable(cond.next)
                 elif cond.next.type is TokenType.ID:
                     return self.undefinedHandler(cond.next.value)
+                if cond.next.type is TokenType.LIST:
+                    return Node(cond.next.type,cond.next.value)
                 return Node(cond.next.type, cond.next)
             elif rhs1.next is None and cond.type is TokenType.FALSE:
                 return None
